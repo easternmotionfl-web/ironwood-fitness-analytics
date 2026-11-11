@@ -32,7 +32,7 @@ PEAK_JOIN_FACTOR = 2.0
 WEAK_LOCATION_ID = 10                        # pattern 3 (Ocala)
 WEAK_JOIN_FACTOR = 0.6
 WEAK_CHURN_FACTOR = 1.5
-N_PLAN_CHANGES = 1_000
+PLAN_CHANGE_CANDIDATES = 1_900           # about 1,000 actually change (others churn first)
 FAILED_PAYMENT_RATE = 0.03
 AGE_BANDS = {"18-24": 0.20, "25-34": 0.30, "35-44": 0.22, "45-54": 0.15, "55+": 0.13}
 GENDER_MIX = {"Female": 0.48, "Male": 0.49, "Not given": 0.03}
@@ -107,24 +107,53 @@ def make_members(rng: np.random.Generator, locations: pd.DataFrame) -> pd.DataFr
 
 
 def make_memberships(rng: np.random.Generator, members: pd.DataFrame) -> pd.DataFrame:
-    """One row per plan period. Churn and plan changes are decided HERE.
+    """One row per plan period. Churn and plan changes are decided here."""
+    plan_names = list(PLAN_MIX)
+    plan_ids = {"Basic": 1, "Standard": 2, "Premium": 3}
 
-    Steps:
-    1. Give each member a starting plan from PLAN_MIX.
-    2. Walk each member month by month from join_date toward AS_OF. Each month,
-       churn chance = MONTHLY_CHURN[plan]
-         x FIRST_90_DAY_CHURN_MULTIPLIER if within 90 days of joining
-         x WEAK_CHURN_FACTOR if home location is WEAK_LOCATION_ID.
-       If rng.random() < chance: end the row on that date, status 'cancelled'.
-    3. Pick N_PLAN_CHANGES members to change plan once, at a random point
-       before they churn: end the old row ('changed'), start a new row the
-       next day with a different plan.
-    4. Rows still running at AS_OF: end_date is null, status 'active'.
-    Tip: start with a plain Python loop. 10,000 members is fast enough.
-    """
-    return pd.DataFrame(
-        columns=["membership_id", "member_id", "plan_id", "start_date", "end_date", "status"]
-    )
+    # 1. Each member's starting plan, and which members will try a plan change
+    start_plans = rng.choice(plan_names, size=len(members), p=list(PLAN_MIX.values()))
+    changers = set(rng.choice(members["member_id"], size=PLAN_CHANGE_CANDIDATES, replace=False))
+
+    rows = []
+    for m, plan in zip(members.itertuples(), start_plans):
+        joined = m.join_date
+        row_start = joined
+        change_month = int(rng.integers(2, 13)) if m.member_id in changers else None
+        k = 1
+        while True:
+            month_start = joined + pd.DateOffset(months=k - 1)
+            month_end = joined + pd.DateOffset(months=k) - pd.Timedelta(days=1)
+
+            # 2. Plan change at the start of this month: end the old row, start a new one
+            if k == change_month and month_start <= AS_OF:
+                rows.append((m.member_id, plan_ids[plan], row_start, month_start - pd.Timedelta(days=1), "changed"))
+                plan = rng.choice([p for p in plan_names if p != plan])
+                row_start = month_start
+
+            # 3. Still running at the as-of date: the row stays open
+            if month_end > AS_OF:
+                rows.append((m.member_id, plan_ids[plan], row_start, pd.NaT, "active"))
+                break
+
+            # 4. Churn chance for this month of membership
+            chance = MONTHLY_CHURN[plan]
+            if (month_start - joined).days < 90:
+                chance *= FIRST_90_DAY_CHURN_MULTIPLIER
+            if m.home_location_id == WEAK_LOCATION_ID:
+                chance *= WEAK_CHURN_FACTOR
+            if rng.random() < chance:
+                cancel_date = month_end - pd.Timedelta(days=int(rng.integers(0, 28)))
+                cancel_date = max(cancel_date, row_start)
+                rows.append((m.member_id, plan_ids[plan], row_start, cancel_date, "cancelled"))
+                break
+            k += 1
+
+    # 5. Put it together and number the rows
+    df = pd.DataFrame(rows, columns=["member_id", "plan_id", "start_date", "end_date", "status"])
+    df = df.sort_values(["member_id", "start_date"], kind="stable").reset_index(drop=True)
+    df.insert(0, "membership_id", np.arange(1, len(df) + 1))
+    return df
 
 
 # ---------------------------------------------------------------------------

@@ -16,3 +16,10 @@ where not exists (
     and cast(ci.check_in_at as date) >= m.start_date
     and cast(ci.check_in_at as date) <= coalesce(m.end_date, date '2025-12-31')
 );
+-- 3. Payments dated outside their own membership row (expect 0)
+select count(*) as outside
+from raw.payments p
+join raw.memberships m
+  on m.membership_id = p.membership_id
+where p.charge_date < m.start_date
+   or p.charge_date > coalesce(m.end_date, date '2025-12-31');

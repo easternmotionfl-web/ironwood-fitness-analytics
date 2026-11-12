@@ -1,0 +1,9 @@
+{
+  "python.analysis.exclude": [
+    "**/.venv",
+    "**/data",
+    "**/target",
+    "**/logs",
+    "**/dbt_packages"
+  ]
+}

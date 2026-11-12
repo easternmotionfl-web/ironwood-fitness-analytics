@@ -36,6 +36,16 @@ PLAN_CHANGE_CANDIDATES = 1_900           # about 1,000 actually change (others c
 FAILED_PAYMENT_RATE = 0.03
 AGE_BANDS = {"18-24": 0.20, "25-34": 0.30, "35-44": 0.22, "45-54": 0.15, "55+": 0.13}
 GENDER_MIX = {"Female": 0.48, "Male": 0.49, "Not given": 0.03}
+# Check-in hour weights for 5am to 10pm: busiest early morning and after work
+HOUR_WEIGHTS = [4, 8, 9, 7, 5, 4, 4, 5, 5, 4, 4, 6, 9, 10, 8, 6, 3, 1]
+# Cancellation reason: (weight for later leavers, weight for first-90-day leavers)
+CANCEL_REASONS = {
+    "Cost": (0.30, 0.25),
+    "Not using it": (0.25, 0.45),
+    "Switched gyms": (0.20, 0.15),
+    "Moving": (0.15, 0.10),
+    "Injury or health": (0.10, 0.05),
+}
 
 
 # ---------------------------------------------------------------------------
@@ -71,7 +81,7 @@ def make_plans() -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# TODO: Wednesday
+# Wednesday
 # ---------------------------------------------------------------------------
 def make_members(rng: np.random.Generator, locations: pd.DataFrame) -> pd.DataFrame:
     """One row per person who ever joined."""
@@ -157,38 +167,104 @@ def make_memberships(rng: np.random.Generator, members: pd.DataFrame) -> pd.Data
 
 
 # ---------------------------------------------------------------------------
-# TODO: Thursday
+# Thursday
 # ---------------------------------------------------------------------------
 def make_check_ins(rng: np.random.Generator, memberships: pd.DataFrame, members: pd.DataFrame) -> pd.DataFrame:
-    """One row per visit, only between a row's start_date and end_date (or AS_OF).
+    """One row per visit, at the member's home gym, only while a membership row is running."""
+    home = members.set_index("member_id")["home_location_id"]
+    plan_names = {1: "Basic", 2: "Standard", 3: "Premium"}
+    hour_probs = np.array(HOUR_WEIGHTS) / sum(HOUR_WEIGHTS)
 
-    For each membership row and each month it covers: visits =
-    rng.poisson(VISITS_PER_MONTH[plan] x SUMMER_VISIT_FACTOR if summer).
-    Spread visits over the days the row covers that month; add a check-in time.
-    Use the member's home location (add some visits to other locations later if
-    you want).
-    """
-    return pd.DataFrame(columns=["check_in_id", "member_id", "location_id", "check_in_at"])
+    member_ids, days = [], []
+    for row in memberships.itertuples():
+        start = row.start_date
+        end = row.end_date if pd.notna(row.end_date) else AS_OF
+        visits = VISITS_PER_MONTH[plan_names[row.plan_id]]
+
+        # 1. Walk each calendar month the row covers
+        for month in pd.date_range(start.replace(day=1), end, freq="MS"):
+            seg_start = max(start, month)
+            seg_end = min(end, month + pd.offsets.MonthEnd(0))
+            n_days = (seg_end - seg_start).days + 1
+
+            # 2. Expected visits scale with the share of the month covered, lower in summer
+            expected = visits * n_days / month.days_in_month
+            if month.month in SUMMER_MONTHS:
+                expected *= SUMMER_VISIT_FACTOR
+            n = rng.poisson(expected)
+
+            # 3. A random day in the covered part of the month for each visit
+            offsets = rng.integers(0, n_days, size=n)
+            days.append(seg_start.to_datetime64() + offsets.astype("timedelta64[D]"))
+            member_ids.append(np.full(n, row.member_id))
+
+    member_ids = np.concatenate(member_ids)
+    days = np.concatenate(days)
+
+    # 4. A time of day: busiest early morning and after work
+    hours = rng.choice(np.arange(5, 23), size=len(days), p=hour_probs)
+    minutes = rng.integers(0, 60, size=len(days))
+    check_in_at = (pd.to_datetime(days) + pd.to_timedelta(hours, unit="h")
+                   + pd.to_timedelta(minutes, unit="m"))
+
+    df = pd.DataFrame({"member_id": member_ids,
+                       "location_id": home.loc[member_ids].to_numpy(),
+                       "check_in_at": check_in_at})
+    df = df.sort_values(["check_in_at", "member_id"], kind="stable").reset_index(drop=True)
+    df.insert(0, "check_in_id", np.arange(1, len(df) + 1))
+    return df
 
 
 def make_payments(rng: np.random.Generator, memberships: pd.DataFrame, plans: pd.DataFrame) -> pd.DataFrame:
-    """One row per monthly charge attempt.
+    """One row per monthly charge attempt, on the member's billing day."""
+    price = plans.set_index("plan_id")["monthly_price"]
+    # The member's first row starts on their join date, which sets the billing day
+    join_date = memberships.groupby("member_id")["start_date"].min()
 
-    Charge day = member's join day, capped at the 28th. Amount = price of the
-    plan held that day. Never after end_date or AS_OF. Mark
-    FAILED_PAYMENT_RATE as status 'failed' (no retry, never causes churn).
-    """
-    return pd.DataFrame(columns=["payment_id", "member_id", "membership_id", "charge_date", "amount", "status"])
+    rows = []
+    for row in memberships.itertuples():
+        start = row.start_date
+        end = row.end_date if pd.notna(row.end_date) else AS_OF
+        joined = join_date[row.member_id]
+        bill_day = min(joined.day, 28)
+
+        # 1. One charge a month on the billing day, while the row is running
+        for month in pd.date_range(start.replace(day=1), end, freq="MS"):
+            charge = month.replace(day=bill_day)
+            if start <= charge <= end:
+                rows.append((row.member_id, row.membership_id, charge, price[row.plan_id]))
+
+        # 2. Members who join on the 29th to 31st pay on their join date first
+        if start == joined and joined.day > 28:
+            rows.append((row.member_id, row.membership_id, joined, price[row.plan_id]))
+
+    df = pd.DataFrame(rows, columns=["member_id", "membership_id", "charge_date", "amount"])
+
+    # 3. A small share of charges fail: no retry, and they never cause churn
+    df["status"] = np.where(rng.random(len(df)) < FAILED_PAYMENT_RATE, "failed", "paid")
+    df = df.sort_values(["charge_date", "member_id"], kind="stable").reset_index(drop=True)
+    df.insert(0, "payment_id", np.arange(1, len(df) + 1))
+    return df
 
 
 def make_cancellations(rng: np.random.Generator, memberships: pd.DataFrame) -> pd.DataFrame:
-    """DERIVED, not generated: one row per membership with status 'cancelled'.
+    """Derived, not generated: one row per cancelled membership, plus a reason."""
+    join_date = memberships.groupby("member_id")["start_date"].min()
+    cancelled = memberships[memberships["status"] == "cancelled"].copy()
 
-    Same member and date as the row's end_date, plus a reason drawn from a
-    short list (moving, cost, not using it, injury, switched gyms). Consider
-    making 'not using it' more likely for members who churn in the first 90 days.
-    """
-    return pd.DataFrame(columns=["cancellation_id", "member_id", "membership_id", "cancel_date", "reason"])
+    # 1. Early leavers (first 90 days) are more likely to say "Not using it"
+    tenure = (cancelled["end_date"] - cancelled["member_id"].map(join_date)).dt.days
+    early = (tenure < 90).to_numpy()
+    reasons = list(CANCEL_REASONS)
+    p_late = np.array([w for w, _ in CANCEL_REASONS.values()])
+    p_early = np.array([w for _, w in CANCEL_REASONS.values()])
+    cancelled["reason"] = [rng.choice(reasons, p=p_early if e else p_late) for e in early]
+
+    df = cancelled.rename(columns={"end_date": "cancel_date"})[
+        ["member_id", "membership_id", "cancel_date", "reason"]]
+    df = df.sort_values(["cancel_date", "member_id"], kind="stable").reset_index(drop=True)
+    df.insert(0, "cancellation_id", np.arange(1, len(df) + 1))
+    return df
 
 
 # ---------------------------------------------------------------------------

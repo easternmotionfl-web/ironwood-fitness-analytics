@@ -61,3 +61,19 @@ from raw.locations l
 join joins j using (location_id)
 join churn c using (location_id)
 order by joins_per_open_month;
+
+-- 7. Churn in the first 90 days vs. after (expect first 90 days about 2x)
+with per_member as (
+  select mb.member_id,
+         date_diff('day', mb.join_date, max(coalesce(m.end_date, date '2025-12-31'))) + 1 as total_days,
+         max(case when m.status = 'cancelled' then date_diff('day', mb.join_date, m.end_date) end) as cancel_tenure_days
+  from raw.members mb
+  join raw.memberships m using (member_id)
+  group by mb.member_id, mb.join_date
+)
+select
+  round(100.0 * count(*) filter (where cancel_tenure_days < 90)
+        / (sum(least(total_days, 90)) / 30.0), 1) as first_90_days_churn_pct,
+  round(100.0 * count(*) filter (where cancel_tenure_days >= 90)
+        / (sum(greatest(total_days - 90, 0)) / 30.0), 1) as after_90_days_churn_pct
+from per_member;

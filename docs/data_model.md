@@ -46,3 +46,8 @@
 
 ## Changes from the starting rules (and why)
 - 
+## Staging fixes
+- Cast all date columns to DATE: join_date, start_date, end_date, charge_date, cancel_date, opened_date. Raw stores them as TIMESTAMP at midnight.
+- Cast payments.amount and plans.monthly_price to DECIMAL(10,2). Raw stores them as DOUBLE.
+- Keep check_ins.check_in_at as TIMESTAMP (the time of day is real).
+- Derive locations.city from location_name (text before " - "). Raw has no city column.

@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    tables:
+      - name: locations
+      - name: plans
+      - name: members
+      - name: memberships
+      - name: check_ins
+      - name: payments
+      - name: cancellations

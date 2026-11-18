@@ -33,3 +33,7 @@ models:
   ironwood:
     staging:
       +materialized: view
+
+
+vars:
+  as_of_date: '2025-12-31'

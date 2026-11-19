@@ -33,7 +33,10 @@ models:
   ironwood:
     staging:
       +materialized: view
+    marts:
+      +materialized: table
 
 
 vars:
   as_of_date: '2025-12-31'
+  window_start_date: '2023-01-01'

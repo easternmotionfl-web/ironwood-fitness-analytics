@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: dim_locations
+    description: "One row per gym, with how many months it was open in the data window."
+    columns:
+      - name: location_id
+        description: "Unique ID for each gym."
+        data_tests: [unique, not_null]
+      - name: months_open_in_window
+        description: "Months the gym was open between the window start and the as-of date. Use it to compare gyms fairly."
+
+  - name: dim_plans
+    description: "One row per plan tier (Basic, Standard, Premium) with its monthly price."
+    columns:
+      - name: plan_id
+        description: "Unique ID for each plan."
+        data_tests: [unique, not_null]
+
+  - name: dim_members
+    description: "One row per member who ever joined, with their current plan and status taken from their latest membership row."
+    columns:
+      - name: member_id
+        description: "Unique ID for each member."
+        data_tests: [unique, not_null]
+      - name: current_status
+        description: "active if the latest membership row is still running, churned if it was cancelled."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['active', 'churned']
+      - name: location_id
+        description: "The member's home gym."
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_locations')
+                field: location_id
+      - name: tenure_days
+        description: "Days from joining to the churn date, or to the as-of date if still active."
+
+  - name: fct_memberships
+    description: "One row per plan period. A plan change ends one row and starts another. The base for active members, churn and tenure."
+    columns:
+      - name: membership_id
+        description: "Unique ID for each plan period."
+        data_tests: [unique, not_null]
+      - name: member_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_members')
+                field: member_id
+      - name: member_days
+        description: "Days this plan period covered. Monthly churn rate = cancellations / (member_days / 30)."
+      - name: is_cancelled_first_90_days
+        description: "True if the member cancelled within 90 days of first joining."
+
+  - name: fct_check_ins
+    description: "One row per gym visit, with the plan the member held on the visit date."
+    columns:
+      - name: check_in_id
+        description: "Unique ID for each visit."
+        data_tests: [unique, not_null]
+      - name: membership_id
+        description: "The plan period covering the visit date. Never empty: every visit falls inside a membership."
+        data_tests: [not_null]
+
+  - name: fct_payments
+    description: "One row per monthly charge attempt. Revenue counts only paid charges."
+    columns:
+      - name: payment_id
+        description: "Unique ID for each charge attempt."
+        data_tests: [unique, not_null]
+      - name: revenue
+        description: "The amount if the charge was paid, 0 if it failed. Sum this for revenue."
+        data_tests: [not_null]

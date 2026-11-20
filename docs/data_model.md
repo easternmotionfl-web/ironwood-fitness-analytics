@@ -41,7 +41,7 @@
 | Premium visits more, churns less | Visits a month: Basic 4, Standard 5, Premium 8. Churn: 6% / 5% / 3% | Visits per active member per month, and monthly churn rate, by plan |
 | Summer check-in dip | Visits x 0.8 in Jun to Aug | Check-ins per active member per month: Jun to Aug about 20% below other months |
 
-## Deliberate data problems (optional, add after the clean version works)
+## Deliberate data problems (Pending)
 - 
 
 ## Changes from the starting rules (and why)

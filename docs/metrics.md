@@ -10,12 +10,13 @@ These are the business metrics the semantic layer will define and the LLM will a
 ## Membership
 
 ### Active members
-- **Definition:** members with a membership row covering a given date.
+- **Definition:** members with a membership row covering a given date. A membership's end date is the member's last day, so a member who cancels on a date still counts as active on that date.
 - **Formula:** `count(distinct member_id)` from `fct_memberships` where `start_date <= date <= effective_end_date`.
 - **Dimensions:** location, plan (held on that date), age band, gender.
-- **Check:** 3,916 on Dec 31, 2025.
+- **Check:** 3,917 on Dec 31, 2025 (one member cancelled that day and is counted as active).
 - **Example question:** How many active members did Ocala have at the end of 2025?
 - **Watch out:** a point-in-time count. "Active members in March" needs a specific day, normally the last day of the month.
+- **Not the same as current status:** `current_status` in `dim_members` shows 3,916 active. It excludes every member whose membership has ended, including the one who cancelled on Dec 31, 2025. Use active members for "as of a date" questions and current status for "who is still a member".
 
 ### New members
 - **Definition:** members whose first membership started in a period.

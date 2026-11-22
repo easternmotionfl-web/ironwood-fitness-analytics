@@ -1,5 +1,11 @@
 # Build log
 
+## Week 3 (Nov 23 to 27)
+- **What I did:** Installed MetricFlow and validated.
+- **What broke or confused me:** MetricFlow couldn't find the profile in ~/.dbt, so I moved it into the project.
+- **What I learned:**
+- **Hours:**
+
 ## Week 2 (Nov 16 to 20)
 - **What I did:** 7 staging models with type fixes, 48 dbt tests, 6 marts (3 dims, 3 facts), docs site, metric definitions, README.
 - **What broke or confused me:** 

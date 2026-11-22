@@ -26,14 +26,16 @@ clean-targets:         # directories to be removed by `dbt clean`
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
 
-# In this example config, we tell dbt to build all models in the example/
-# directory as views. These settings can be overridden in the individual model
-# files using the `{{ config(...) }}` macro.
+# Staging models are views (cheap, always current).
+# Mart models are tables (joined and calculated once, fast to read).
+# Utility models (the time spine) are tables.
 models:
   ironwood:
     staging:
       +materialized: view
     marts:
+      +materialized: table
+    utilities:
       +materialized: table
 
 

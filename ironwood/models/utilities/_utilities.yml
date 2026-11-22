@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: time_spine_daily
+    description: "One row per day from the window start to the as-of date. MetricFlow uses it for any metric over time."
+    time_spine:
+      standard_granularity_column: date_day
+    columns:
+      - name: date_day
+        description: "A calendar day."
+        granularity: day
+        data_tests: [unique, not_null]

@@ -41,20 +41,66 @@ models:
 
   - name: fct_memberships
     description: "One row per plan period. A plan change ends one row and starts another. The base for active members, churn and tenure."
+    semantic_model:
+      enabled: true
+    agg_time_dimension: start_date
     columns:
       - name: membership_id
         description: "Unique ID for each plan period."
         data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: membership
       - name: member_id
         data_tests:
           - relationships:
               arguments:
                 to: ref('dim_members')
                 field: member_id
+        entity:
+          type: foreign
+          name: member
+      - name: location_id
+        description: "The member's home gym."
+        entity:
+          type: foreign
+          name: location
+      - name: plan_id
+        entity:
+          type: foreign
+          name: plan
+      - name: start_date
+        description: "First day of this plan period."
+        granularity: day
+        dimension:
+          type: time
+      - name: plan_name
+        description: "The plan held during this period: Basic, Standard or Premium."
+        dimension:
+          type: categorical
+      - name: status
+        description: "How the period ended: active (still running), changed (plan change) or cancelled."
+        dimension:
+          type: categorical
+      - name: cancel_reason
+        description: "The member's stated reason, for cancelled periods only."
+        dimension:
+          type: categorical
       - name: member_days
         description: "Days this plan period covered. Monthly churn rate = cancellations / (member_days / 30)."
       - name: is_cancelled_first_90_days
         description: "True if the member cancelled within 90 days of first joining."
+    metrics:
+      - name: cancellations
+        description: "Plan periods that ended with status cancelled. A plan change is not a cancellation."
+        type: simple
+        agg: sum
+        expr: "case when is_cancelled then 1 else 0 end"
+      - name: member_months
+        description: "Member-days divided by 30. The denominator for monthly rates."
+        type: simple
+        agg: sum
+        expr: "member_days / 30.0"
 
   - name: fct_check_ins
     description: "One row per gym visit, with the plan the member held on the visit date."
@@ -75,3 +121,10 @@ models:
       - name: revenue
         description: "The amount if the charge was paid, 0 if it failed. Sum this for revenue."
         data_tests: [not_null]
+
+metrics:
+  - name: monthly_churn_rate
+    description: "Cancellations per member-month. Counts members for the days they were actually members, so partial months are fair."
+    type: ratio
+    numerator: cancellations
+    denominator: member_months

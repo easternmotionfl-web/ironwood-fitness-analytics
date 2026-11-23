@@ -74,6 +74,11 @@ models:
         granularity: day
         dimension:
           type: time
+      - name: end_date
+        description: "Last day of this plan period. Empty while still active."
+        granularity: day
+        dimension:
+          type: time
       - name: plan_name
         description: "The plan held during this period: Basic, Standard or Premium."
         dimension:
@@ -96,6 +101,8 @@ models:
         type: simple
         agg: sum
         expr: "case when is_cancelled then 1 else 0 end"
+        agg_time_dimension: end_date
+        filter: "{{ Dimension('membership__status') }} = 'cancelled'"
       - name: member_months
         description: "Member-days divided by 30. The denominator for monthly rates."
         type: simple
@@ -114,13 +121,61 @@ models:
 
   - name: fct_payments
     description: "One row per monthly charge attempt. Revenue counts only paid charges."
+    semantic_model:
+      enabled: true
+    agg_time_dimension: charge_date
     columns:
       - name: payment_id
         description: "Unique ID for each charge attempt."
         data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: payment
+      - name: member_id
+        entity:
+          type: foreign
+          name: member
+      - name: membership_id
+        entity:
+          type: foreign
+          name: membership
+      - name: location_id
+        entity:
+          type: foreign
+          name: location
+      - name: charge_date
+        description: "Date the charge was attempted."
+        granularity: day
+        dimension:
+          type: time
+      - name: plan_name
+        description: "The plan the member was charged for."
+        dimension:
+          type: categorical
+      - name: status
+        description: "paid or failed. Failed charges are not retried."
+        dimension:
+          type: categorical
       - name: revenue
         description: "The amount if the charge was paid, 0 if it failed. Sum this for revenue."
         data_tests: [not_null]
+    metrics:
+      - name: revenue
+        description: "Money collected from paid charges."
+        type: simple
+        agg: sum
+        expr: revenue
+      - name: charge_attempts
+        description: "All monthly charge attempts, paid or failed."
+        type: simple
+        agg: count
+        expr: 1
+      - name: failed_charges
+        description: "Charge attempts that failed."
+        type: simple
+        agg: count
+        expr: 1
+        filter: "{{ Dimension('payment__status') }} = 'failed'"      
 
 metrics:
   - name: monthly_churn_rate
@@ -128,3 +183,8 @@ metrics:
     type: ratio
     numerator: cancellations
     denominator: member_months
+  - name: failed_payment_rate
+    description: "Share of charge attempts that failed."
+    type: ratio
+    numerator: failed_charges
+    denominator: charge_attempts 

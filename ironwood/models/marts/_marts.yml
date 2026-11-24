@@ -99,8 +99,8 @@ models:
       - name: cancellations
         description: "Plan periods that ended with status cancelled. A plan change is not a cancellation."
         type: simple
-        agg: sum
-        expr: "case when is_cancelled then 1 else 0 end"
+        agg: count
+        expr: 1
         agg_time_dimension: end_date
         filter: "{{ Dimension('membership__status') }} = 'cancelled'"
       - name: member_months
@@ -111,13 +111,49 @@ models:
 
   - name: fct_check_ins
     description: "One row per gym visit, with the plan the member held on the visit date."
+    semantic_model:
+      enabled: true
+    agg_time_dimension: check_in_date
     columns:
       - name: check_in_id
         description: "Unique ID for each visit."
         data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: check_in
+      - name: member_id
+        entity:
+          type: foreign
+          name: member
       - name: membership_id
         description: "The plan period covering the visit date. Never empty: every visit falls inside a membership."
         data_tests: [not_null]
+        entity:
+          type: foreign
+          name: membership
+      - name: location_id
+        entity:
+          type: foreign
+          name: location
+      - name: check_in_date
+        description: "Date of the visit."
+        granularity: day
+        dimension:
+          type: time
+      - name: check_in_hour
+        description: "Hour of the visit, from 5 (5am) to 22 (10pm)."
+        dimension:
+          type: categorical
+      - name: plan_name
+        description: "The plan held on the visit date."
+        dimension:
+          type: categorical
+    metrics:
+      - name: visits
+        description: "Gym visits (check-ins). Compare groups with visits_per_member_month, not raw visits."
+        type: simple
+        agg: count
+        expr: 1
 
   - name: fct_payments
     description: "One row per monthly charge attempt. Revenue counts only paid charges."
@@ -188,3 +224,8 @@ metrics:
     type: ratio
     numerator: failed_charges
     denominator: charge_attempts 
+  - name: visits_per_member_month
+    description: "Visits per member-month. The fair way to compare how often members visit across plans or gyms."
+    type: ratio
+    numerator: visits
+    denominator: member_months

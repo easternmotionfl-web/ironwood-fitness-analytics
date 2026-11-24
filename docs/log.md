@@ -2,7 +2,7 @@
 
 ## Week 3 (Nov 23 to 27)
 - **What I did:** Installed MetricFlow and validated.
-- **What broke or confused me:** MetricFlow couldn't find the profile in ~/.dbt, so I moved it into the project.  Cancellations by start date showed churn falling when it was rising. A metric needs the right time dimension.  mf only sees what dbt parse last wrote. Check the Artifact Modified Time.
+- **What broke or confused me:** MetricFlow couldn't find the profile in ~/.dbt, so I moved it into the project.  Cancellations by start date showed churn falling when it was rising. A metric needs the right time dimension.  mf only sees what dbt parse last wrote. Check the Artifact Modified Time. Chose Ollama with qwen2.5-coder:7b. Starting with this model, will switch only if it picks wrong metrics. Plan to compare with a hosted model in Week 6.
 - **What I learned:**
 - **Hours:**
 

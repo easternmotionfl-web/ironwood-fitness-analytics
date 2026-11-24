@@ -95,5 +95,5 @@ These are the business metrics the semantic layer will define and the LLM will a
 - **Example question:** When is the gym busiest?
 
 ## Open questions for the semantic layer
-- Monthly trends for churn rate, revenue per member-month and visits need member-days split by month. Decide whether to add a month-by-member model or compute the split in the semantic layer.
-- Active members needs a date. Decide on a default (the as-of date) when a question doesn't give one.
+- Monthly rates use member_months_by_day and churn_rate_over_time.
+- Active members needs a single day, usually the as-of date

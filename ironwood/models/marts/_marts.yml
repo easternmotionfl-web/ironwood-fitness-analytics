@@ -213,6 +213,51 @@ models:
         expr: 1
         filter: "{{ Dimension('payment__status') }} = 'failed'"      
 
+  - name: fct_member_days
+    description: "One row per member per day they were a member. The base for active members on a date, and for member-months split correctly by month."
+    semantic_model:
+      enabled: true
+    agg_time_dimension: date_day
+    columns:
+      - name: member_day_id
+        description: "Unique ID for each member-day: the membership ID plus the date."
+        data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: member_day
+      - name: membership_id
+        entity:
+          type: foreign
+          name: membership
+      - name: member_id
+        entity:
+          type: foreign
+          name: member
+      - name: location_id
+        entity:
+          type: foreign
+          name: location
+      - name: date_day
+        description: "A day the member held this membership."
+        granularity: day
+        dimension:
+          type: time
+      - name: plan_name
+        description: "The plan held on this day."
+        dimension:
+          type: categorical
+    metrics:
+      - name: active_members
+        description: "Distinct members with a membership covering the date. Ask for one day, usually the last day of a period. The end date counts as the member's last day."
+        type: simple
+        agg: count_distinct
+        expr: member_id
+      - name: member_months_by_day
+        description: "Member-days divided by 30, counted on the day they happened. Use this for monthly or yearly rates."
+        type: simple
+        agg: sum
+        expr: "1 / 30.0"
+        
 metrics:
   - name: monthly_churn_rate
     description: "Cancellations per member-month. Counts members for the days they were actually members, so partial months are fair."

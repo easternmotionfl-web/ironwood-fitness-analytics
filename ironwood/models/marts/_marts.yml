@@ -257,7 +257,7 @@ models:
         type: simple
         agg: sum
         expr: "1 / 30.0"
-        
+
 metrics:
   - name: monthly_churn_rate
     description: "Cancellations per member-month. Counts members for the days they were actually members, so partial months are fair."
@@ -274,3 +274,8 @@ metrics:
     type: ratio
     numerator: visits
     denominator: member_months
+  - name: churn_rate_over_time
+    description: "Cancellations per member-month, with each member-day counted in the period it happened. Use this for churn by month or year."
+    type: ratio
+    numerator: cancellations
+    denominator: member_months_by_day  

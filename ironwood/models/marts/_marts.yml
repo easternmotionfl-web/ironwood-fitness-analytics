@@ -3,10 +3,23 @@ version: 2
 models:
   - name: dim_locations
     description: "One row per gym, with how many months it was open in the data window."
+    semantic_model:
+      enabled: true
     columns:
       - name: location_id
         description: "Unique ID for each gym."
         data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: location
+      - name: location_name
+        description: "Gym name, for example Jacksonville - Southside or Ocala."
+        dimension:
+          type: categorical
+      - name: city
+        description: "City the gym is in."
+        dimension:
+          type: categorical
       - name: months_open_in_window
         description: "Months the gym was open between the window start and the as-of date. Use it to compare gyms fairly."
 
@@ -19,16 +32,23 @@ models:
 
   - name: dim_members
     description: "One row per member who ever joined, with their current plan and status taken from their latest membership row."
+    semantic_model:
+      enabled: true
     columns:
       - name: member_id
         description: "Unique ID for each member."
         data_tests: [unique, not_null]
+        entity:
+          type: primary
+          name: member
       - name: current_status
         description: "active if the latest membership row is still running, churned if it was cancelled."
         data_tests:
           - accepted_values:
               arguments:
                 values: ['active', 'churned']
+        dimension:
+          type: categorical
       - name: location_id
         description: "The member's home gym."
         data_tests:
@@ -36,6 +56,21 @@ models:
               arguments:
                 to: ref('dim_locations')
                 field: location_id
+        entity:
+          type: foreign
+          name: location
+      - name: age_band
+        description: "Age group at joining: 18-24, 25-34, 35-44, 45-54 or 55+."
+        dimension:
+          type: categorical
+      - name: gender
+        description: "Female, Male or Not given."
+        dimension:
+          type: categorical
+      - name: current_plan
+        description: "The plan on the member's latest membership row."
+        dimension:
+          type: categorical
       - name: tenure_days
         description: "Days from joining to the churn date, or to the as-of date if still active."
 

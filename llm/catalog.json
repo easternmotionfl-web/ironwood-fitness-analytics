@@ -1,0 +1,122 @@
+{
+  "metrics": [
+    {
+      "name": "active_members",
+      "description": "Distinct members with a membership covering the date. Ask for one day, usually the last day of a period. The end date counts as the member's last day."
+    },
+    {
+      "name": "cancellations",
+      "description": "Plan periods that ended with status cancelled. A plan change is not a cancellation."
+    },
+    {
+      "name": "charge_attempts",
+      "description": "All monthly charge attempts, paid or failed."
+    },
+    {
+      "name": "churn_rate_over_time",
+      "description": "Cancellations per member-month, with each member-day counted in the period it happened. Use this for churn by month or year."
+    },
+    {
+      "name": "failed_charges",
+      "description": "Charge attempts that failed."
+    },
+    {
+      "name": "failed_payment_rate",
+      "description": "Share of charge attempts that failed."
+    },
+    {
+      "name": "member_months",
+      "description": "Member-days divided by 30. The denominator for monthly rates."
+    },
+    {
+      "name": "member_months_by_day",
+      "description": "Member-days divided by 30, counted on the day they happened. Use this for monthly or yearly rates."
+    },
+    {
+      "name": "monthly_churn_rate",
+      "description": "Cancellations per member-month. Counts members for the days they were actually members, so partial months are fair."
+    },
+    {
+      "name": "revenue",
+      "description": "Money collected from paid charges."
+    },
+    {
+      "name": "visits",
+      "description": "Gym visits (check-ins). Compare groups with visits_per_member_month, not raw visits."
+    },
+    {
+      "name": "visits_per_member_month",
+      "description": "Visits per member-month. The fair way to compare how often members visit across plans or gyms."
+    }
+  ],
+  "dimensions": [
+    {
+      "name": "metric_time__day",
+      "description": "The metric's date, by day. Use for a single date such as active members on Dec 31, 2025."
+    },
+    {
+      "name": "metric_time__month",
+      "description": "The metric's date, by month."
+    },
+    {
+      "name": "metric_time__year",
+      "description": "The metric's date, by year."
+    },
+    {
+      "name": "payment__plan_name",
+      "description": "The plan the member was charged for."
+    },
+    {
+      "name": "payment__status",
+      "description": "paid or failed. Failed charges are not retried."
+    },
+    {
+      "name": "check_in__check_in_hour",
+      "description": "Hour of the visit, from 5 (5am) to 22 (10pm)."
+    },
+    {
+      "name": "check_in__plan_name",
+      "description": "The plan held on the visit date."
+    },
+    {
+      "name": "member_day__plan_name",
+      "description": "The plan held on this day."
+    },
+    {
+      "name": "membership__plan_name",
+      "description": "The plan held during this period: Basic, Standard or Premium."
+    },
+    {
+      "name": "membership__status",
+      "description": "How the period ended: active (still running), changed (plan change) or cancelled."
+    },
+    {
+      "name": "membership__cancel_reason",
+      "description": "The member's stated reason, for cancelled periods only."
+    },
+    {
+      "name": "location__location_name",
+      "description": "Gym name, for example Jacksonville - Southside or Ocala."
+    },
+    {
+      "name": "location__city",
+      "description": "City the gym is in."
+    },
+    {
+      "name": "member__current_status",
+      "description": "active if the latest membership row is still running, churned if it was cancelled."
+    },
+    {
+      "name": "member__age_band",
+      "description": "Age group at joining: 18-24, 25-34, 35-44, 45-54 or 55+."
+    },
+    {
+      "name": "member__gender",
+      "description": "Female, Male or Not given."
+    },
+    {
+      "name": "member__current_plan",
+      "description": "The plan on the member's latest membership row."
+    }
+  ]
+}

@@ -21,6 +21,7 @@ Rules:
 - For "highest", "most" or "top", set order to the metric name with a minus sign in front, for example "-monthly_churn_rate". For "lowest" or "least", use the metric name without the minus. Otherwise leave order empty.
 - For a question about a single date, such as active members at the end of a year, group by metric_time__day and set start_time and end_time to that date as YYYY-MM-DD. Otherwise leave both empty.
 - When comparing groups, use rates, not raw counts: prefer monthly_churn_rate, visits_per_member_month and failed_payment_rate over cancellations, visits and failed_charges.
+- The data runs to 2025-12-31. Questions about now, currently, or "how many members do we have" mean that date: use active_members grouped by metric_time__day with start_time and end_time set to 2025-12-31.
 
 Catalog:
 {catalog}
@@ -88,6 +89,13 @@ def validate(choice: dict, catalog: dict) -> list:
     if choice["order"] not in allowed_order:
         problems.append(f"Order must use a chosen metric or dimension: {choice['order']}")
 
+        # Business rules that must always hold, whatever the model chose
+    if "active_members" in choice["metrics"] and not choice["start_time"]:
+        problems.append("active_members needs a single date: set start_time and end_time.")
+    time_groups = [g for g in choice["group_by"] if g.startswith("metric_time")]
+    if "monthly_churn_rate" in choice["metrics"] and time_groups:
+        problems.append("monthly_churn_rate can't be grouped by time: use churn_rate_over_time.")
+    
     return problems
 
 

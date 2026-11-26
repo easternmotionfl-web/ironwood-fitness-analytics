@@ -295,7 +295,7 @@ models:
 
 metrics:
   - name: monthly_churn_rate
-    description: "Cancellations per member-month. Counts members for the days they were actually members, so partial months are fair."
+    description: "Cancellations per member-month over the whole period. Use it to compare groups such as plans, gyms or genders. Do not group it by month or year: use churn_rate_over_time for churn over time."
     type: ratio
     numerator: cancellations
     denominator: member_months

@@ -4,7 +4,7 @@ Questions tested by hand before the eval set exists.
 
 | # | Question | Correct choice | First result | Fix | After fix |
 |---|---|---|---|---|---|
-| 1 | Which plan has the highest churn? | monthly_churn_rate by membership__plan_name, -order | Correct | - | |
+| 1 | Which plan has the highest churn? | monthly_churn_rate by membership__plan_name, -order | Correct | — | |
 | 2 | Which gym has the highest churn? | monthly_churn_rate by location__location_name, -order | Correct | — | |
 | 3 | What was total revenue by year? | revenue by metric_time__year | Correct | — | |
 | 4 | Do Premium members visit more than Basic members? | visits_per_member_month by membership__plan_name | Correct | — | |

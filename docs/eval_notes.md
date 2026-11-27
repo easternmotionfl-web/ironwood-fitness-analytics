@@ -15,4 +15,5 @@ Questions tested by hand before the eval set exists.
 Notes:
 - Questions 1 and 7 closely match the prompt's examples, so they're easy passes.
 - The model sometimes adds an order the question didn't ask for (question 6).
-
+- Visits: it rounded 7.48 to 7.5 and 3.74 to 3.7, despite "copy each number exactly". It's harmless here, but it's a rule break. Your Week 5 scoring needs to decide whether that counts as wrong.
+- "We have 3,917 active members" leaves out "as of Dec 31, 2025." A real user could take that as today's number. One way to fix it later: show the date in the answer whenever start_time is set.
